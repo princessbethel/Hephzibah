@@ -1,0 +1,70 @@
+version: "3.8"
+services:
+  jenkins-master:
+    image: jenkins/jenkins:lts
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - labsetup_jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - JENKINS_SLAVE_AGENT_PORT=50000
+
+  jenkins-slave:
+    image: jenkins/inbound-agent
+    depends_on:
+      - jenkins-master
+    environment:
+      - JENKINS_URL=http://jenkins-master:8080
+      - JENKINS_AGENT_NAME=slave01
+      - JENKINS_SECRET=jenkins-agent-secret
+      - JENKINS_AGENT_WORKDIR=/home/jenkins/agent
+    ports:
+      - "2222:22"
+    volumes:
+      - labsetup_jenkins-slave-ssh:/root/.ssh
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  sonarqube:
+    image: sonarqube:latest
+    ports:
+      - "9000:9000"
+    volumes:
+      - labsetup_sonarqube-data:/opt/sonarqube/data
+      - labsetup_sonarqube-logs:/opt/sonarqube/logs
+      - labsetup_sonarqube-extensions:/opt/sonarqube/extensions
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - /root/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - labsetup_grafana-storage:/var/lib/grafana
+
+  registry:
+    image: registry:2
+    ports:
+      - "5000:5000"
+    volumes:
+      - labsetup_registry-data:/var/lib/registry
+
+networks:
+  default:
+    name: labsetup_default
+
+volumes:
+  labsetup_jenkins-data:
+  labsetup_jenkins-slave-ssh:
+  labsetup_sonarqube-data:
+  labsetup_sonarqube-logs:
+  labsetup_sonarqube-extensions:
+  labsetup_grafana-storage:
+  labsetup_registry-data:

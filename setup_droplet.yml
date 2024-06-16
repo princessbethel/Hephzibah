@@ -1,0 +1,19 @@
+- hosts: app_servers
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Java
+      apt:
+        name: openjdk-11-jdk
+        state: present
+
+    - name: Ensure the application directory exists
+      file:
+        path: /opt/app
+        state: directory
+        owner: deployer
+        group: deployer
+        mode: "0755"

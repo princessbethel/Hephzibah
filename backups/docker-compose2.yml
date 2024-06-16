@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  web:
+    image: tomcat:9.0
+    ports:
+      - "8081:8080"
+    volumes:
+      - ${WORKSPACE}/target/your-app.war:/usr/local/tomcat/webapps/your-app.war
+    environment:
+      - ENV_VAR_NAME=value
+volumes:
+  db-data:

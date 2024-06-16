@@ -1,0 +1,85 @@
+- hosts: app_servers
+  become: yes
+  vars:
+    ansible_user: "deployer"
+    server_ip: "{{ server_ip }}"
+  tasks:
+    - name: Wait for dpkg lock to be released
+      shell: |
+        while sudo lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+          echo "Waiting for dpkg lock to be released..."
+          sleep 2
+        done
+      become: yes
+
+    - name: Kill any existing apt-get processes
+      shell: |
+        sudo killall apt-get || true
+        sudo killall dpkg || true
+      become: yes
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      become: yes
+
+    - name: Fix and clean broken packages
+      shell: |
+        sudo dpkg --configure -a
+        sudo apt-get install -f
+      become: yes
+
+    - name: Ensure Java is installed
+      apt:
+        name: openjdk-11-jdk
+        state: present
+      become: yes
+
+    - name: Copy application WAR to server
+      copy:
+        src: "{{ workspace }}/java-tomcat-sample/target/java-tomcat-sample-0.0.1.war"
+        dest: /home/{{ ansible_user }}/java-tomcat-sample.war
+      become: yes
+
+    - name: Copy webapp-runner JAR to server
+      copy:
+        src: "{{ workspace }}/java-tomcat-sample/target/dependency/webapp-runner.jar"
+        dest: /home/{{ ansible_user }}/webapp-runner.jar
+      become: yes
+
+    - name: Create a script to run the application
+      copy:
+        dest: /home/{{ ansible_user }}/run_app.sh
+        content: |
+          #!/bin/bash
+          nohup java -jar /home/{{ ansible_user }}/webapp-runner.jar --port 8080 /home/{{ ansible_user }}/java-tomcat-sample.war > /home/{{ ansible_user }}/app.log 2>&1 &
+      become: yes
+
+    - name: Set execute permission on the run script
+      file:
+        path: /home/{{ ansible_user }}/run_app.sh
+        mode: "0755"
+      become: yes
+
+    - name: Start the application
+      shell: /home/{{ ansible_user }}/run_app.sh
+      become: yes
+
+    - name: Verify application deployment
+      uri:
+        url: "http://{{ server_ip }}:8080/"
+        return_content: yes
+      register: app_status
+      until: app_status.status == 200
+      retries: 5
+      delay: 10
+      become: yes
+
+    - name: Debug application log if deployment verification fails
+      when: app_status.status != 200
+      shell: cat /home/{{ ansible_user }}/app.log
+      register: app_log
+      become: yes
+
+    - debug:
+        var: app_log.stdout_lines
