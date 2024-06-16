@@ -1,5 +1,29 @@
-# Hephzibah
 # Installation and Setup Guide
+
+## Table of Contents
+
+- [Installation and Setup Guide](#installation-and-setup-guide)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Prerequisites](#prerequisites)
+- [Step 1: Provision and Configure the Primary Host](#step-1-provision-and-configure-the-primary-host)
+  - [Terraform Configuration for Primary Host](#terraform-configuration-for-primary-host)
+  - [Step-by-Step Guide to Determine and Set ansible_user](#step-by-step-guide-to-determine-and-set-ansible_user)
+  - [Ansible Playbook for Setting Up Tools](#ansible-playbook-for-setting-up-tools)
+    - [Explanation](#explanation)
+    - [Running the Playbook](#running-the-playbook)
+    - [Configuring Prometheus to Scrape Jenkins Metrics](#configuring-prometheus-to-scrape-jenkins-metrics)
+    - [Creating a Shared Network for Docker Containers](#creating-a-shared-network-for-docker-containers)
+    - [Verifying Connectivity and Monitoring](#verifying-connectivity-and-monitoring)
+- [Configure Digital SSH](#configure-digital-ssh)
+- [Configure Jenkins](#configure-jenkins)
+- [Step 3: Install Additional Plugins](#step-3-install-additional-plugins)
+- [Step 4: Configure Global Tools](#step-4-configure-global-tools)
+- [Step 5: Create Jenkins Pipeline](#step-5-create-jenkins-pipeline)
+  - [Repository Files Explanation](#repository-files-explanation)
+    - [Jenkinsfile](#jenkinsfile)
+    - [Terraform](#terraform)
+- [Closing Remarks](#closing-remarks)
 
 ## Overview
 
@@ -682,11 +706,240 @@ pipeline {
 ```
 
 **_Explanation:_**
+![alt text](image-27.png)
 
 - This is the Jenkins pipeline script that defines the CI/CD process. It includes stages for cleaning up the workspace, checking out the source code, building the application, performing SonarQube analysis, provisioning infrastructure with Terraform, and deploying the application using Ansible.
 
-This file can be found in the Jenkins_Output.txt
+The Job pipeline can be found in the Jenkins_Output.txt
 
 Time it takes to provision the deployment server with terraform
 
 ![alt text](image-26.png)
+
+### Terraform
+
+```hcl
+terraform {
+  required_providers {
+    digitalocean = {
+      source  = "digitalocean/digitalocean"
+      version = "~> 2.0"
+    }
+  }
+}
+
+provider "digitalocean" {
+  token = var.do_token
+}
+
+data "digitalocean_droplet" "existing" {
+  name = "app-server"
+}
+
+resource "digitalocean_droplet" "app_server" {
+  count = data.digitalocean_droplet.existing.id == "" ? 1 : 0
+  image    = "ubuntu-20-04-x64"
+  name     = "app-server"
+  region   = "nyc3"
+  size     = "s-1vcpu-1gb"
+  ssh_keys = [var.ssh_key_id]
+
+  provisioner "remote-exec" {
+    inline = [
+      "apt-get update && apt-get upgrade -y",
+      "apt-get install -y sshpass",
+      "useradd -m -s /bin/bash deployer",
+      "echo 'deployer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
+      "mkdir -p /home/deployer/.ssh",
+      "echo '${var.ssh_public_key}' > /home/deployer/.ssh/authorized_keys",
+      "chown -R deployer:deployer /home/deployer/.ssh",
+      "chmod 700 /home/deployer/.ssh",
+      "chmod 600 /home/deployer/.ssh/authorized_keys"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = "root"
+      private_key = file(var.ssh_private_key)
+      host        = self.ipv4_address
+    }
+  }
+
+  provisioner "local-exec" {
+    command = <<EOF
+      ssh-keyscan -H ${self.ipv4_address} >> ~/.ssh/known_hosts
+    EOF
+  }
+}
+
+output "app_server_ip" {
+  value = coalesce(
+    data.digitalocean_droplet.existing.ipv4_address,
+    try(digitalocean_droplet.app_server[0].ipv4_address, null)
+  )
+}
+
+```
+
+**_ Explanation of Terraform Configuration_**
+This Terraform configuration script provisions and configures a DigitalOcean droplet. The script includes the following components:
+
+- Terraform block: Specifies the required provider.
+- Provider block: Configures the DigitalOcean provider with an API token.
+- Data block: Fetches an existing droplet, if it exists.
+- Resource block: Defines the droplet to be created if it doesn't already exist.
+- Provisioners: Executes commands on the droplet for setup and configuration.
+- Output block: Retrieves and outputs the IP address of the droplet.
+
+Detailed Breakdown
+
+1. Terraform Block
+
+   ```hcl
+   terraform {
+   required_providers {
+    digitalocean = {
+      source  = "digitalocean/digitalocean"
+      version = "~> 2.0"
+    }
+   }
+   }
+
+   ```
+
+- Purpose: Specifies that the configuration requires the DigitalOcean provider.
+- Components:
+  - `required_providers`: Defines the provider and its source.
+  - `digitalocean`: Specifies the source and version of the DigitalOcean provider.
+
+2. Provider Block
+
+   ```hcl
+   provider "digitalocean" {
+   token = var.do_token
+   }
+
+   ```
+
+- Purpose: Configures the DigitalOcean provider with the necessary authentication token.
+- Components:
+  - `token`: Uses a variable var.do_token to store the DigitalOcean API token securely.
+
+3. Data Block
+
+   ```hcl
+   data "digitalocean_droplet" "existing" {
+   name = "app-server"
+   }
+
+   ```
+
+- Purpose: Fetches information about an existing droplet named "app-server".
+- Components:
+  - name: Specifies the name of the droplet to fetch.
+
+4. Resource Block
+
+   ```hcl
+   resource "digitalocean_droplet" "app_server" {
+   count = data.digitalocean_droplet.existing.id == "" ? 1 : 0
+   image    = "ubuntu-20-04-x64"
+   name     = "app-server"
+   region   = "nyc3"
+   size     = "s-1vcpu-1gb"
+   ssh_keys = [var.ssh_key_id]
+
+    provisioner "remote-exec" {
+    inline = [
+    "apt-get update && apt-get upgrade -y",
+    "apt-get install -y sshpass",
+    "useradd -m -s /bin/bash deployer",
+    "echo 'deployer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
+    "mkdir -p /home/deployer/.ssh",
+    "echo '${var.ssh_public_key}' > /home/deployer/.ssh/authorized_keys",
+    "chown -R deployer:deployer /home/deployer/.ssh",
+    "chmod 700 /home/deployer/.ssh",
+    "chmod 600 /home/deployer/.ssh/authorized_keys"
+    ]
+
+        connection {
+          type        = "ssh"
+          user        = "root"
+          private_key = file(var.ssh_private_key)
+          host        = self.ipv4_address
+        }
+
+    }
+
+    provisioner "local-exec" {
+    command = <<EOF
+    ssh-keyscan -H ${self.ipv4_address} >> ~/.ssh/known_hosts
+    EOF
+    }
+    }
+
+   ```
+
+- Purpose: Defines the droplet to be created and configures it using provisioners.
+
+- Components:
+
+- `count`: Determines whether to create a new droplet based on the existence of an existing one.
+- `image`: Specifies the OS image for the droplet.
+- `name`: Sets the name of the droplet.
+- `region`: Specifies the region where the droplet will be created.
+- `size`: Defines the size (resources) of the droplet.
+- `ssh_keys`: Uses a variable to provide the SSH key ID for authentication.
+
+- Provisioners:
+
+- **_Remote-Exec_**: Runs commands on the droplet after it is created.
+
+- **_Inline Commands_**:
+
+  - Updates and upgrades the system.
+  - Installs `sshpass`.
+  - Creates a user `deployer` and configures sudo privileges.
+  - Sets up the SSH key for the deployer user.
+
+- **_Connection_**: Specifies how to connect to the droplet
+
+- Uses SSH with the root user and private key.
+
+- Local-Exec: Executes a local command to add the droplet's IP to known hosts for SSH.
+- Ensures the new droplet's SSH fingerprint is recognized.
+
+5. **_Output Block_**
+
+```hcl
+output "app_server_ip" {
+value = coalesce(
+ data.digitalocean_droplet.existing.ipv4_address,
+ try(digitalocean_droplet.app_server[0].ipv4_address, null)
+)
+}
+
+
+```
+
+- **_Purpose_**: Provides the IP address of the app server.
+- Components
+  - `value`: Uses the coalesce function to choose the IP address of the existing droplet or the newly created one.
+  - Ensures that the output is the IP address of the app server, whether it was retrieved from an existing droplet or a newly created one.
+
+**_Summary_**
+This Terraform configuration script is designed to automate the provisioning and initial setup of a DigitalOcean droplet. It ensures that infrastructure is consistent and repeatable, which is a key aspect of Infrastructure as Code (IaC). The use of variables for sensitive information (like the DigitalOcean API token and SSH key) enhances security, and the provisioners automate essential setup tasks on the new droplet. The output block ensures easy retrieval of the droplet's IP address for further use in the CI/CD pipeline.
+
+# Closing Remarks
+
+The dissertation emphasizes the importance of integrating security and Infrastructure as Code (IaC) into the Software Development Life Cycle (SDLC) through the use of automation, particularly through the development and utilization of a CI/CD pipeline. Here's how the current implementation meets these requirements:
+
+1. Integration of DevSecOps and IaC: The setup incorporates Docker, Docker Compose, Jenkins, SonarQube, Prometheus, and Grafana, which collectively support the automation of security and infrastructure management. This approach is consistent with DevSecOps practices that integrate security into every phase of the development process.
+
+2. CI/CD Pipeline: The Docker Compose setup includes Jenkins for continuous integration and deployment, addressing the automation aspects crucial for the study. Jenkins, configured with both master and slave nodes, is essential for demonstrating the CI/CD pipeline in action, which is a core part of the research.
+
+3. Monitoring and Feedback: With Prometheus and Grafana integrated into the setup, you are equipped to monitor and analyze the metrics and performance of the CI/CD environment. This setup allows for continuous monitoring and feedback, which are vital for optimizing the SDLC and enhancing security and performance, as highlighted in the dissertation.
+
+4. Practical Implementation and Testing: The configuration allows for practical tests and implementation scenarios, aligning with the methodology of building a CI/CD pipeline from scratch to gather data on the impact of automation on security and quality, as described in the dissertation.
+
+This setup not only supports the practical aspects of the research but also provides a robust environment for experimenting with and demonstrating the key concepts of the dissertation on automating security and infrastructure within the SDLC.
