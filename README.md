@@ -553,7 +553,7 @@ You need to authenticate doctl with your DigitalOcean API token. Here’s how:
    - In the Pipeline configuration, scroll down to the Pipeline section.
    - Set the Definition to Pipeline script from SCM.
    - Set SCM to Git.
-   - Provide the repository URL (e.g., https://github.com/ogeeDeveloper/TestProject_CICD.git).
+   - Provide the repository URL (e.g., https://github.com/princessbethel/dissertation.git).
    - Set the Script Path to Jenkinsfile.
 
 ## Repository Files Explanation
@@ -586,7 +586,7 @@ pipeline {
         }
         stage('Checkout SCM') {
             steps {
-                git branch: 'dev', url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git'
+                git branch: 'dev', url: 'https://github.com/princessbethel/dissertation.git'
             }
         }
         stage('Build') {

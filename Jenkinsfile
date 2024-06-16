@@ -23,7 +23,7 @@ pipeline {
         }
         stage('Checkout SCM') {
             steps {
-                git branch: 'dev', url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git'
+                git branch: 'dev', url: 'https://github.com/princessbethel/dissertation.git'
             }
         }
         stage('Build') {

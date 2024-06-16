@@ -24,7 +24,7 @@ pipeline {
         }
         stage('Checkout SCM') {
             steps {
-                git branch: 'dev', url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git'
+                git branch: 'dev', url: 'https://github.com/princessbethel/dissertation.git'
             }
         }
         stage('Build') {
@@ -226,17 +226,17 @@ pipeline {
 3. Build Logs:
    ```
    Started by user admin
-   Checking out git https://github.com/ogeeDeveloper/TestProject_CICD.git into /var/jenkins_home/workspace/TestImplementation@script/011548f96e290499de454e5f4104b27b0ef2698b5067cc550b1279c091fb4d38 to read Jenkinsfile
+   Checking out git https://github.com/princessbethel/dissertation.git into /var/jenkins_home/workspace/TestImplementation@script/011548f96e290499de454e5f4104b27b0ef2698b5067cc550b1279c091fb4d38 to read Jenkinsfile
    Selected Git installation does not exist. Using Default
    The recommended git tool is: NONE
    No credentials specified
    > git rev-parse --resolve-git-dir /var/jenkins_home/workspace/TestImplementation@script/011548f96e290499de454e5f4104b27b0ef2698b5067cc550b1279c091fb4d38/.git # timeout=10
    Fetching changes from the remote Git repository
-   > git config remote.origin.url https://github.com/ogeeDeveloper/TestProject_CICD.git # timeout=10
-   Fetching upstream changes from https://github.com/ogeeDeveloper/TestProject_CICD.git
+   > git config remote.origin.url https://github.com/princessbethel/dissertation.git # timeout=10
+   Fetching upstream changes from https://github.com/princessbethel/dissertation.git
    > git --version # timeout=10
    > git --version # 'git version 2.39.2'
-   > git fetch --tags --force --progress -- https://github.com/ogeeDeveloper/TestProject_CICD.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+   > git fetch --tags --force --progress -- https://github.com/princessbethel/dissertation.git +refs/heads/*:refs/remotes/origin/* # timeout=10
    > git rev-parse refs/remotes/origin/dev^{commit} # timeout=10
    Checking out Revision f766bf0c178725f6520413f92ca08ef996135624 (refs/remotes/origin/dev)
    > git config core.sparsecheckout # timeout=10
@@ -255,11 +255,11 @@ pipeline {
    No credentials specified
    > git rev-parse --resolve-git-dir /var/jenkins_home/workspace/TestImplementation/.git # timeout=10
    Fetching changes from the remote Git repository
-   > git config remote.origin.url https://github.com/ogeeDeveloper/TestProject_CICD.git # timeout=10
-   Fetching upstream changes from https://github.com/ogeeDeveloper/TestProject_CICD.git
+   > git config remote.origin.url https://github.com/princessbethel/dissertation.git # timeout=10
+   Fetching upstream changes from https://github.com/princessbethel/dissertation.git
    > git --version # timeout=10
    > git --version # 'git version 2.39.2'
-   > git fetch --tags --force --progress -- https://github.com/ogeeDeveloper/TestProject_CICD.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+   > git fetch --tags --force --progress -- https://github.com/princessbethel/dissertation.git +refs/heads/*:refs/remotes/origin/* # timeout=10
    > git rev-parse refs/remotes/origin/dev^{commit} # timeout=10
    Checking out Revision f766bf0c178725f6520413f92ca08ef996135624 (refs/remotes/origin/dev)
    > git config core.sparsecheckout # timeout=10
@@ -286,13 +286,13 @@ pipeline {
    The recommended git tool is: NONE
    No credentials specified
    Cloning the remote Git repository
-   Cloning repository https://github.com/ogeeDeveloper/TestProject_CICD.git
+   Cloning repository https://github.com/princessbethel/dissertation.git
    > git init /var/jenkins_home/workspace/TestImplementation # timeout=10
-   Fetching upstream changes from https://github.com/ogeeDeveloper/TestProject_CICD.git
+   Fetching upstream changes from https://github.com/princessbethel/dissertation.git
    > git --version # timeout=10
    > git --version # 'git version 2.39.2'
-   > git fetch --tags --force --progress -- https://github.com/ogeeDeveloper/TestProject_CICD.git +refs/heads/*:refs/remotes/origin/* # timeout=10
-   > git config remote.origin.url https://github.com/ogeeDeveloper/TestProject_CICD.git # timeout=10
+   > git fetch --tags --force --progress -- https://github.com/princessbethel/dissertation.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+   > git config remote.origin.url https://github.com/princessbethel/dissertation.git # timeout=10
    > git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/* # timeout=10
    Avoid second fetch
    > git rev-parse refs/remotes/origin/dev^{commit} # timeout=10

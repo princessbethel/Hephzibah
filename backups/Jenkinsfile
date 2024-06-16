@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git', branch: 'master'
+                git url: 'https://github.com/princessbethel/dissertation.git', branch: 'master'
             }
         }
 
